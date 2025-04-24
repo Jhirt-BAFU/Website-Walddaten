@@ -1,30 +1,28 @@
+class SPARQLQueryDispatcher {
+	constructor( endpoint ) {
+		this.endpoint = endpoint;
+	}
 
-function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
-	var settings = {
-		headers: { Accept: 'application/sparql-results+json' },
-		data: { query: sparqlQuery }
-	};
-	return $.ajax( endpointUrl, settings ).then( doneCallback );
+	query( sparqlQuery ) {
+		const fullUrl = this.endpoint + '?query=' + encodeURIComponent( sparqlQuery );
+		const headers = { 'Accept': 'application/sparql-results+json' };
+
+		return fetch( fullUrl, { headers } ).then( body => body.json() );
+	}
 }
 
-var endpointUrl = 'https://query.wikidata.org/sparql',
-	sparqlQuery =
-        "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" +
-        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>" +
-        "SELECT ?alt ?sn ?occ WHERE {\n" +
-        "<https://ld.admin.ch/wald/waldgesellschaften/1> <https://ld.admin.ch/wald/waldgesellschaften/occursAtAltitude> ?obj .\n" +
-        "?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasAltitude> ?altitude.\n" +
-        "?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasOccurrence> ?occurrence.\n" +
-        "?occurrence <http://schema.org/identifier> ?occ.\n" +
-        "?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/startswith> ?alt.\n"
-        "?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/shortname> ?sn\n"
-        "}";
-
-makeSPARQLQuery( endpointUrl, sparqlQuery, function( data ) {
-		$( 'body' ).append( $( '<pre>' ).text( JSON.stringify( data ) ) );
-		console.log( data );
-	}
-);
+const endpointUrl = 'https://test.ld.admin.ch/query';
+const sparqlQuery =
+        `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        SELECT ?alt ?sn ?occ WHERE {
+        <https://ld.admin.ch/wald/waldgesellschaften/1> <https://ld.admin.ch/wald/waldgesellschaften/occursAtAltitude> ?obj .
+        ?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasAltitude> ?altitude.
+        ?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasOccurrence> ?occurrence.
+        ?occurrence <http://schema.org/identifier> ?occ.
+        ?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/startswith> ?alt.
+        ?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/shortname> ?sn.
+        }`;
 
 let tooltipText = {
     "rare": {
@@ -122,9 +120,9 @@ let tooltipText = {
   }
   
   function initialize() {
+
     // read params from URL to initialize lang and code
     readURL();
-  
     // add listener to buttons to choose a forest type
     document.querySelectorAll(".ft-button").forEach((button)=>{button.addEventListener("click", function (evt) {
       let code = evt.target.value;
@@ -153,6 +151,9 @@ let tooltipText = {
     // add event listener to share buttons
     document.getElementById("share-mailto").addEventListener("click", ()=>{open("mailto:?body="+encodeURIComponent(location.href))});
     document.getElementById("print").addEventListener("click", ()=>{print()});
-  }
+    }
   
-  initialize();    
+  //initialize();  
+  setLang("de");
+  const queryDispatcher = new SPARQLQueryDispatcher( endpointUrl );
+  queryDispatcher.query( sparqlQuery ).then( console.log );
