@@ -13,16 +13,22 @@ class SPARQLQueryDispatcher {
 
 const endpointUrl = 'https://test.ld.admin.ch/query';
 const sparqlQuery =
-        `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-        SELECT ?alt ?sn ?occ WHERE {
-        <https://ld.admin.ch/wald/waldgesellschaften/1> <https://ld.admin.ch/wald/waldgesellschaften/occursAtAltitude> ?obj .
-        ?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasAltitude> ?altitude.
-        ?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasOccurrence> ?occurrence.
-        ?occurrence <http://schema.org/identifier> ?occ.
-        ?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/startswith> ?alt.
-        ?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/shortname> ?sn.
-        }`;
+  `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  SELECT ?alt ?sn ?occ WHERE {
+  <https://ld.admin.ch/wald/waldgesellschaften/1> <https://ld.admin.ch/wald/waldgesellschaften/occursAtAltitude> ?obj .
+  ?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasAltitude> ?altitude.
+  ?obj <https://ld.admin.ch/wald/waldgesellschaften/altitude/occurrence/hasOccurrence> ?occurrence.
+  ?occurrence <http://schema.org/identifier> ?occ.
+  ?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/endswith> ?alt.
+  ?altitude <https://ld.admin.ch/wald/waldgesellschaften/altitude/shortname> ?sn.
+  }`;
+const sparqlQueryName =
+  `PREFIX schema: <http://schema.org/>
+SELECT ?name WHERE {
+    <https://ld.admin.ch/wald/waldgesellschaften/1> schema:name ?name.
+  FILTER (lang(?name)="de")
+  }`;    
 
 let tooltipText = {
     "rare": {
@@ -38,7 +44,7 @@ let tooltipText = {
       "fr": "très fréquente"
     }
   }
-  let par = {"code": "8a", "lang": "de"};
+  let par = {"code": "1", "lang": "de"};
  
 
   /* This function returns meta information about a given type and code. 
@@ -119,8 +125,8 @@ let tooltipText = {
     window.history.pushState({}, window.title, url);
   }
   
-  function initialize() {
 
+  function initialize() {
     // read params from URL to initialize lang and code
     readURL();
     // add listener to buttons to choose a forest type
@@ -152,8 +158,28 @@ let tooltipText = {
     document.getElementById("share-mailto").addEventListener("click", ()=>{open("mailto:?body="+encodeURIComponent(location.href))});
     document.getElementById("print").addEventListener("click", ()=>{print()});
     }
+
+  async function loadDataAndInitialize() {
+    const queryDispatcher = new SPARQLQueryDispatcher(endpointUrl);
   
-  //initialize();  
-  setLang("de");
-  const queryDispatcher = new SPARQLQueryDispatcher( endpointUrl );
-  queryDispatcher.query( sparqlQuery ).then( console.log );
+      const de_name_data = await queryDispatcher.query(sparqlQueryName);
+      const de_name = de_name_data.results.bindings[0].name.value;
+
+      const rawalt = await queryDispatcher.query(sparqlQuery); 
+      const alt_frequent = rawalt.results.bindings.filter(m => m.occ.value == 2).map(e =>
+        "HL" + "_" + e.sn.value + "_" + e.alt.value);
+      const alt_veryfrequent = rawalt.results.bindings.filter(m => m.occ.value == 1).map(e =>
+        "HL" + "_" + e.sn.value + "_" + e.alt.value);
+
+      var types ={ "forestType": [
+      { 
+      "de": de_name,
+      "fr": "Hêtraie à Millet typique",
+      "code": "1",
+      "veryFrequent": alt_veryfrequent,
+      "lessFrequent": alt_frequent,
+      }]};
+      window.types = types;
+      initialize();
+  }
+  loadDataAndInitialize();
