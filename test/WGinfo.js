@@ -52,6 +52,7 @@ function setLang(lang) {
   document.querySelectorAll(".de, .fr").forEach(e=>{e.classList.add("invisible")});
   document.querySelectorAll("."+lang).forEach(e=>{e.classList.remove("invisible")});
   par.lang = lang;
+  ForestTypeDropdown();
 }
 
 /* read params from URL */
@@ -109,42 +110,6 @@ let tooltipText = {
       "fr": "très fréquente"
     }
 }
-async function initialize() {
-  await nameQuery();
-  await altQuery();
-  // read params from URL to initialize lang and code
-  readURL();
-  // add listener to buttons to choose a forest type
-  document.querySelectorAll(".ft-button").forEach((button)=>{button.addEventListener("click", function (evt) {
-    let code = evt.target.value;
-    parametrizeDiagrams(code);
-    pushURL();
-  })});
-
-  // add listener to buttons to switch language
-  document.querySelectorAll(".lang-button").forEach((button)=>{button.addEventListener("click", function (evt) {
-    let lang = evt.target.value;
-    setLang(lang);
-    pushURL();
-  })});
-
-  // initialize print elements
-  document.getElementById("version").innerHTML = "Version 0.1";
-  document.getElementById("date").innerHTML = Date().toLocaleString();
-
-  // add event listener to hide tooltip
-  document.querySelectorAll("rect, path").forEach((elem)=>{elem.addEventListener("mouseout", hideTooltip)});
-
-  // demo open URL on #HS_C-J
-  document.getElementById("HS_C-J").addEventListener("click", ()=>{open("https://tree-app.ch/?mv=14%7C735882%7C5938511&ml=azt&mp=736251%7C5939154")});
-  document.getElementById("HS_C-J").style.cursor="pointer";
-  
-  // add event listener to share buttons
-  document.getElementById("share-mailto").addEventListener("click", ()=>{open("mailto:?body="+encodeURIComponent(location.href))});
-  document.getElementById("print").addEventListener("click", ()=>{print()});
-  }
-initialize();
-
 
 async function nameQuery(){
   const queryDispatcher = new SPARQLQueryDispatcher(endpointUrl);
@@ -206,4 +171,77 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       target.lessFrequent.push(iden);
     }
   });
+}
+
+function ForestTypeDropdown() {
+  const dropdown = document.getElementById("forestTypeSelect");
+  dropdown.innerHTML = "";
+  types.forestType.forEach(forest => {
+    const option = document.createElement("option");
+    option.value = forest.code;
+     if (par.lang === "de") {
+      option.textContent = forest.de; // Display the German name
+    } else if (par.lang === "fr") {
+      option.textContent = forest.fr; // Display the French name
+    }
+    dropdown.appendChild(option);
+  });
+
+  dropdown.addEventListener("change", function () {
+    const selectedCode = this.value;
+    if (selectedCode) {
+      parametrizeDiagrams(selectedCode);
+      pushURL();
+    }
+  });
+}
+
+async function initialize() {
+  await nameQuery();
+  await altQuery();
+  addExampleForest();
+  // read params from URL to initialize lang and code
+  readURL();
+  // add listener to buttons to choose a forest type
+  document.querySelectorAll(".ft-button").forEach((button)=>{button.addEventListener("click", function (evt) {
+    let code = evt.target.value;
+    parametrizeDiagrams(code);
+    pushURL();
+  })});
+
+  // add listener to buttons to switch language
+  document.getElementById("languageSelect").addEventListener("change", function () {
+    const lang = this.value; // Get the value of the selected option
+    setLang(lang);
+    pushURL();
+  });
+
+  // initialize print elements
+  document.getElementById("version").innerHTML = "Version 0.1";
+  document.getElementById("date").innerHTML = Date().toLocaleString();
+
+  // add event listener to hide tooltip
+  document.querySelectorAll("rect, path").forEach((elem)=>{elem.addEventListener("mouseout", hideTooltip)});
+
+  // demo open URL on #HS_C-J
+  document.getElementById("HS_C-J").addEventListener("click", ()=>{open("https://tree-app.ch/?mv=14%7C735882%7C5938511&ml=azt&mp=736251%7C5939154")});
+  document.getElementById("HS_C-J").style.cursor="pointer";
+  
+  // add event listener to share buttons
+  document.getElementById("share-mailto").addEventListener("click", ()=>{open("mailto:?body="+encodeURIComponent(location.href))});
+  document.getElementById("print").addEventListener("click", ()=>{print()});
+  }
+initialize();
+
+function addExampleForest() {
+  // Create new example forest types object
+  const emptyType = {
+    "de": "EmptyForest",
+    "fr": "-",
+    "code": "x",
+    "veryFrequent": [],
+    "lessFrequent": []
+  };
+
+  types.forestType.push(emptyType);
 }
